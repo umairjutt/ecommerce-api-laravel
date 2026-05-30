@@ -1,5 +1,14 @@
 # E-commerce API — Laravel 11 (Flagship)
 
+[![CI](https://github.com/your-username/ecommerce-api-laravel/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/ecommerce-api-laravel/actions/workflows/ci.yml)
+![PHP 8.3](https://img.shields.io/badge/PHP-8.3-777BB4?logo=php&logoColor=white)
+![Laravel 11](https://img.shields.io/badge/Laravel-11-FF2D20?logo=laravel&logoColor=white)
+![PHPStan level 5](https://img.shields.io/badge/PHPStan-level%205-2A5C8A)
+![Code style: Pint](https://img.shields.io/badge/code%20style-pint-orange)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
+
+> Replace `your-username` in the badge URLs after you push the repo to GitHub.
+
 A production-grade, scalable e-commerce REST API. Headless by design — bring your own storefront (mobile, React, Vue, Flutter). This is the kind of backend a senior Laravel engineer would ship for a real client.
 
 [Live demo (TODO)](https://example.com) · [Swagger docs](http://localhost:8000/docs/api) · [Postman collection](docs/postman_collection.json)
@@ -95,25 +104,39 @@ Seed creates:
 
 ## Key API endpoints
 
-| Method | Path                          | Role        |
-|--------|-------------------------------|-------------|
-| GET    | `/api/products`               | public      |
-| GET    | `/api/products/{slug}`        | public      |
-| POST   | `/api/cart/items`             | customer    |
-| POST   | `/api/checkout`               | customer    |
-| POST   | `/api/payments/{gateway}/init`| customer    |
-| POST   | `/api/webhooks/{gateway}`     | gateway     |
-| GET    | `/api/orders`                 | customer    |
-| GET    | `/api/admin/orders`           | admin       |
+| Method | Path                                   | Role        | Notes |
+|--------|----------------------------------------|-------------|-------|
+| GET    | `/api/products`                        | public      | Cached, filterable; returns `ProductResource` |
+| GET    | `/api/products/{slug}`                 | public      | |
+| GET    | `/api/metrics`                         | public      | Prometheus text exposition |
+| POST   | `/api/cart/items`                      | customer    | |
+| POST   | `/api/checkout`                        | customer    | Accepts `Idempotency-Key`; rate-limited 10/min |
+| POST   | `/api/webhooks/{gateway}`              | gateway     | Signature-verified, de-duplicated |
+| GET    | `/api/orders`                          | customer    | Returns `OrderResource` |
+| GET    | `/api/admin/orders`                    | admin       | |
+| POST   | `/api/admin/orders/{order}/transition` | admin       | State-machine guarded |
+| POST   | `/api/admin/orders/{order}/refund`     | admin       | Full/partial gateway refund + restock |
 
 Full list in [Swagger](http://localhost:8000/docs/api).
+
+### Idempotent checkout
+
+`POST /api/checkout` accepts an `Idempotency-Key` header. The first request is
+processed and its response cached in Redis for 24h; any retry with the same key
+replays the stored response (header `Idempotent-Replayed: true`) instead of
+creating a second order or double-charging the customer.
 
 ## Key implementation highlights
 
 - **Strategy-based gateways** — [app/Domain/Payment/Gateways/PaymentGateway.php](app/Domain/Payment/Gateways/PaymentGateway.php) + implementations (Stripe/PayPal/Razorpay) so adding a new gateway is one class
+- **Idempotent checkout** — [app/Http/Middleware/IdempotencyKey.php](app/Http/Middleware/IdempotencyKey.php) replays cached responses for repeated `Idempotency-Key`s with a Redis lock to guard concurrent duplicates
 - **Idempotent webhooks** — see `WebhookController::handle()` (idempotency key checked in Redis before processing)
+- **Gateway refunds** — `OrderService::refund()` issues full/partial refunds through the same `PaymentGateway` interface and restocks on full refund
 - **Atomic stock decrement** — `OrderService::reserveStock()` uses `lockForUpdate()` in a transaction
 - **Cache invalidation** — `ProductObserver` flushes tagged Redis cache on save/delete
+- **Custom rate limiter** — the sibling [`umair/redis-rate-limiter`](../redis-rate-limiter) package (sliding window) guards checkout via the `rate.limit` middleware
+- **Stable API contracts** — `ProductResource` / `OrderResource` decouple the JSON shape from Eloquent models
+- **Observability** — `X-Request-Id` on every request, structured JSON logs, and `/api/metrics`
 
 ## Tests
 
@@ -127,7 +150,7 @@ docker compose exec app ./vendor/bin/pest --coverage
 - Search uses MySQL full-text; switch to Meilisearch/Typesense for production scale
 - No multi-currency yet (single base currency)
 - Email templates are unstyled HTML; production should use MJML or React Email
-- Refunds are gateway-mediated only; no partial-refund UI yet
+- Refunds are gateway-mediated (full + partial supported via API); no admin refund UI yet
 
 ## Deploy
 

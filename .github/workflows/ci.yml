@@ -5,13 +5,32 @@ on:
   pull_request: { branches: [main] }
 
 jobs:
-  test:
+  quality:
+    name: Lint + Static analysis + Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: mbstring, pdo, sqlite, pdo_sqlite, bcmath, intl
-      - run: composer install --prefer-dist --no-progress --no-interaction
-      - run: ./vendor/bin/pest --ci
+          extensions: mbstring, pdo, sqlite, pdo_sqlite, bcmath, intl, redis
+          coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Code style (Pint)
+        run: ./vendor/bin/pint --test
+
+      - name: Static analysis (Larastan)
+        run: ./vendor/bin/phpstan analyse --no-progress
+
+      - name: Tests (Pest)
+        run: ./vendor/bin/pest --ci

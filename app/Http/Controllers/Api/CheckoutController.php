@@ -8,6 +8,13 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * @group Checkout
+ *
+ * Convert a cart into an order and initialise a payment intent on the chosen
+ * gateway. Supports an `Idempotency-Key` header to make retries safe.
+ * @authenticated
+ */
 class CheckoutController extends Controller
 {
     public function __construct(

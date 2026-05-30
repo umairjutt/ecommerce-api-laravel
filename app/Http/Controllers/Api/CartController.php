@@ -7,6 +7,12 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * @group Cart
+ *
+ * Manage the authenticated user's cart, line items, and coupons.
+ * @authenticated
+ */
 class CartController extends Controller
 {
     public function __construct(private readonly CartService $carts) {}

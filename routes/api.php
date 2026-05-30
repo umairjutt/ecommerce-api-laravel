@@ -4,10 +4,14 @@ use App\Http\Controllers\Api\Admin\AdminOrderController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CheckoutController;
+use App\Http\Controllers\Api\MetricsController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\WebhookController;
 use Illuminate\Support\Facades\Route;
+
+// Observability
+Route::get('metrics', [MetricsController::class, 'index']);
 
 // Public
 Route::get('products', [ProductController::class, 'index']);
@@ -33,7 +37,10 @@ Route::middleware(['auth:sanctum', 'role:customer|admin'])->group(function () {
     Route::delete('cart/items/{item}', [CartController::class, 'removeItem']);
     Route::post('cart/coupon', [CartController::class, 'applyCoupon']);
 
-    Route::middleware('throttle:checkout')->post('checkout', [CheckoutController::class, 'checkout']);
+    // Idempotency-Key makes checkout retries safe; sliding-window limiter (10/min)
+    // from the umair/redis-rate-limiter package caps abuse.
+    Route::middleware(['idempotency', 'rate.limit:checkout,10,60'])
+        ->post('checkout', [CheckoutController::class, 'checkout']);
 
     Route::get('orders', [OrderController::class, 'index']);
     Route::get('orders/{order}', [OrderController::class, 'show']);
@@ -43,4 +50,5 @@ Route::middleware(['auth:sanctum', 'role:customer|admin'])->group(function () {
 Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {
     Route::get('orders', [AdminOrderController::class, 'index']);
     Route::post('orders/{order}/transition', [AdminOrderController::class, 'transition']);
+    Route::post('orders/{order}/refund', [AdminOrderController::class, 'refund']);
 });

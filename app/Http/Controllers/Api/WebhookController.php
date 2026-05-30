@@ -12,6 +12,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * @group Webhooks
+ *
+ * Inbound payment gateway webhooks. Signatures are verified inside each
+ * gateway adapter, and events are de-duplicated via a Redis idempotency key.
+ */
 class WebhookController extends Controller
 {
     public function __construct(
