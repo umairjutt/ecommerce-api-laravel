@@ -1,0 +1,26 @@
+/vendor
+/node_modules
+/public/build
+/storage/*.key
+/.env
+/.env.*
+!/.env.example
+/.phpunit.result.cache
+/.phpunit.cache
+.DS_Store
+Thumbs.db
+.idea
+.vscode
+auth.json
+
+# --- hidden guide / AI-assist meta files ---
+PORTFOLIO.md
+HOW-TO-USE.md
+*HOW-TO*
+*HOWTO*
+*GUIDE*
+*guide*
+DEPLOY.md
+*.ai.md
+.cursor/
+.cursorrules

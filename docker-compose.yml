@@ -1,0 +1,35 @@
+services:
+  app:
+    build: .
+    ports: ["8000:8000"]
+    volumes: [".:/var/www/html"]
+    depends_on:
+      mysql: {condition: service_healthy}
+      redis: {condition: service_started}
+
+  horizon:
+    build: .
+    command: php artisan horizon
+    volumes: [".:/var/www/html"]
+    depends_on: [app, redis, mysql]
+
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_DATABASE: shop
+      MYSQL_USER: shop
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: rootsecret
+    ports: ["3307:3306"]
+    volumes: [mysql_data:/var/lib/mysql]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootsecret"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6380:6379"]
+
+volumes:
+  mysql_data:

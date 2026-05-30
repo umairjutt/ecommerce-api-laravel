@@ -1,0 +1,56 @@
+{
+    "name": "umair/ecommerce-api-laravel",
+    "type": "project",
+    "description": "Scalable e-commerce REST API with multi-gateway payments, RBAC, queues, and Redis caching.",
+    "license": "MIT",
+    "require": {
+        "php": "^8.2",
+        "laravel/framework": "^11.0",
+        "laravel/sanctum": "^4.0",
+        "laravel/horizon": "^5.24",
+        "laravel/tinker": "^2.9",
+        "predis/predis": "^2.2",
+        "spatie/laravel-permission": "^6.4",
+        "stripe/stripe-php": "^14.0",
+        "paypal/paypal-server-sdk": "^0.6.0",
+        "razorpay/razorpay": "^2.9",
+        "knuckleswtf/scribe": "^4.36"
+    },
+    "require-dev": {
+        "fakerphp/faker": "^1.23",
+        "laravel/pint": "^1.13",
+        "mockery/mockery": "^1.6",
+        "nunomaduro/collision": "^8.1",
+        "pestphp/pest": "^3.0",
+        "pestphp/pest-plugin-laravel": "^3.0",
+        "spatie/laravel-ignition": "^2.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/",
+            "Database\\Factories\\": "database/factories/",
+            "Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "post-autoload-dump": [
+            "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
+            "@php artisan package:discover --ansi"
+        ]
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
