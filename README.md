@@ -1,32 +1,32 @@
-# E-commerce API — Laravel 11 (Flagship)
+# E-commerce API — Laravel 11
 
-[![CI](https://github.com/your-username/ecommerce-api-laravel/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/ecommerce-api-laravel/actions/workflows/ci.yml)
+[CI results](https://github.com/umairjutt/ecommerce-api-laravel/actions) · [Engineering guide](PORTFOLIO.md)
+
+> **Status:** Development commerce API. Payment lifecycle validation, retry/concurrency handling and standalone setup require further work before real transactions.
+
+[![CI](https://github.com/umairjutt/ecommerce-api-laravel/actions/workflows/ci.yml/badge.svg)](https://github.com/umairjutt/ecommerce-api-laravel/actions/workflows/ci.yml)
 ![PHP 8.3](https://img.shields.io/badge/PHP-8.3-777BB4?logo=php&logoColor=white)
 ![Laravel 11](https://img.shields.io/badge/Laravel-11-FF2D20?logo=laravel&logoColor=white)
-![PHPStan level 5](https://img.shields.io/badge/PHPStan-level%205-2A5C8A)
-![Code style: Pint](https://img.shields.io/badge/code%20style-pint-orange)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
-> Replace `your-username` in the badge URLs after you push the repo to GitHub.
+A headless Laravel commerce API exploring catalog management, cart calculations, order state transitions and payment adapter design.
 
-A production-grade, scalable e-commerce REST API. Headless by design — bring your own storefront (mobile, React, Vue, Flutter). This is the kind of backend a senior Laravel engineer would ship for a real client.
-
-[Live demo (TODO)](https://example.com) · [Swagger docs](http://localhost:8000/docs/api) · [Postman collection](docs/postman_collection.json)
+[API routes](routes/api.php) · [Tests](tests)
 
 ## What this demonstrates
 
-- **Clean Architecture** — Services + Repositories, no fat controllers
-- **Multi-gateway payments** — Stripe, PayPal, Razorpay behind one `PaymentGateway` interface (Strategy pattern), with webhook signature verification and idempotency
+- **Domain organization** — services separate cart, order and payment logic from HTTP handling
+- **Multi-gateway payments** — Stripe, PayPal, Razorpay behind one `PaymentGateway` interface (Strategy pattern), with provider-specific webhook parsing; complete signature and lifecycle verification is required before real payments
 - **RBAC** — 4 roles (guest, customer, vendor, admin) with policy-based authorization
 - **Catalog** — products, categories, attributes, variants, full-text search
 - **Cart engine** — guest -> authenticated cart merge, coupon codes, tax/shipping calculation
 - **Order state machine** — `pending -> paid -> fulfilled -> shipped -> delivered` (+ refund path)
-- **Atomic inventory** — DB-level row locking on stock decrement (no oversell)
-- **Queue workers** — order emails, webhook processing, low-stock alerts via Horizon
+- **Stock reservation** — row locks guard stock decrement in the order transaction; concurrency regression coverage remains
+- **Queue infrastructure** — Horizon and Redis configuration for asynchronous workflows
 - **Redis caching** — tagged cache for product listings with observer-driven invalidation
-- **Custom rate limiter** — uses [`umair/redis-rate-limiter`](../redis-rate-limiter) package
+- **Custom rate limiter** — uses [`umair/redis-rate-limiter`](https://github.com/umairjutt/redis-rate-limiter) package
 - **OpenAPI docs** — auto-generated from controller annotations via Scribe
-- **Pest tests** — feature tests for every endpoint, unit tests for services
+- **Pest tests** — selected feature and unit scenarios; see `tests/` for current scope
 
 ## Architecture
 
@@ -84,7 +84,7 @@ flowchart TB
 ## Quick start
 
 ```bash
-git clone <repo>
+git clone https://github.com/umairjutt/ecommerce-api-laravel.git
 cd ecommerce-api-laravel
 cp .env.example .env
 docker compose up -d
@@ -130,11 +130,11 @@ creating a second order or double-charging the customer.
 
 - **Strategy-based gateways** — [app/Domain/Payment/Gateways/PaymentGateway.php](app/Domain/Payment/Gateways/PaymentGateway.php) + implementations (Stripe/PayPal/Razorpay) so adding a new gateway is one class
 - **Idempotent checkout** — [app/Http/Middleware/IdempotencyKey.php](app/Http/Middleware/IdempotencyKey.php) replays cached responses for repeated `Idempotency-Key`s with a Redis lock to guard concurrent duplicates
-- **Idempotent webhooks** — see `WebhookController::handle()` (idempotency key checked in Redis before processing)
-- **Gateway refunds** — `OrderService::refund()` issues full/partial refunds through the same `PaymentGateway` interface and restocks on full refund
+- **Webhook deduplication example** — a Redis event key is used; durable processing and retry semantics remain
+- **Refund adapter example** — provider dispatch is implemented; partial-refund state and concurrent/retry semantics remain
 - **Atomic stock decrement** — `OrderService::reserveStock()` uses `lockForUpdate()` in a transaction
 - **Cache invalidation** — `ProductObserver` flushes tagged Redis cache on save/delete
-- **Custom rate limiter** — the sibling [`umair/redis-rate-limiter`](../redis-rate-limiter) package (sliding window) guards checkout via the `rate.limit` middleware
+- **Custom rate limiter** — the sibling [`umair/redis-rate-limiter`](https://github.com/umairjutt/redis-rate-limiter) package (sliding window) guards checkout via the `rate.limit` middleware
 - **Stable API contracts** — `ProductResource` / `OrderResource` decouple the JSON shape from Eloquent models
 - **Observability** — `X-Request-Id` on every request, structured JSON logs, and `/api/metrics`
 
@@ -150,11 +150,11 @@ docker compose exec app ./vendor/bin/pest --coverage
 - Search uses MySQL full-text; switch to Meilisearch/Typesense for production scale
 - No multi-currency yet (single base currency)
 - Email templates are unstyled HTML; production should use MJML or React Email
-- Refunds are gateway-mediated (full + partial supported via API); no admin refund UI yet
+- Refund adapters need provider-specific identifier, lifecycle, partial-refund and concurrency validation
 
 ## Deploy
 
-See [DEPLOY.md](DEPLOY.md) for Railway + managed MySQL + managed Redis setup.
+The Compose configuration is for local development; production deployment documentation remains to be completed.
 
 <!-- ownership:author -->
 ---
@@ -163,4 +163,4 @@ See [DEPLOY.md](DEPLOY.md) for Railway + managed MySQL + managed Redis setup.
 
 **Umair** &mdash; [@umairjutt](https://github.com/umairjutt)
 
-Designed, built and maintained by me. Licensed under the [MIT License](LICENSE).
+Maintained by [Umair Jutt](https://github.com/umairjutt). See [LICENSE](LICENSE) for repository licensing.
